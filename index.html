@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GeNIE: A Generalizable Navigation System for In-the-Wild Environments</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚗</text></svg>">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>GeNIE: A Generalizable Navigation System for In-the-Wild Environments</h1>
+            
+            <div class="authors">
+                <a href="#">Jiaming Wang</a>,
+                <a href="#">Diwen Liu</a>,
+                <a href="#">Jizhuo Chen</a>,
+                <a href="#">Jiaxuan Da</a>,
+                <a href="#">Nuowen Qian</a>,
+                <a href="#">Tram Minh Man</a>,
+                <a href="#">Harold Soh</a>
+            </div>
+            
+            <div class="venue">
+                Accepted at IEEE Robotics and Automation Letters (RA-L)
+            </div>
+            
+            <div class="venue" style="color: #27ae60; margin-top: 3px; margin-bottom: 3px;">
+                🏆 Winner of the Earth Rover Challenge, ICRA 2025
+            </div>
+            
+            <div class="venue" style="color: #8e44ad; font-weight: normal; margin-top: 3px; margin-bottom: 3px;">
+                Presented at RSS'25 FM4RoboPlan Workshop
+            </div>
+            
+            <div class="links">
+                <a href="https://arxiv.org/abs/2506.17960" class="btn" target="_blank">Paper</a>
+                <a href="https://github.com/jiaming-ai/GENIE-SAMTP" class="btn" target="_blank">Code</a>
+                <a href="https://github.com/yourusername/genie-dataset" class="btn btn-secondary" target="_blank">Dataset (Coming Soon)</a>
+            </div>
+        </header>
+
+        <div class="tldr">
+            <p>
+                <strong>TL;DR:</strong> GeNIE integrates a generalizable traversability prediction model (SAM-TP) with a novel path fusion strategy that enhances planning stability in noisy and ambiguous settings. 
+                Deployed in the Earth Rover Challenge (ERC) at ICRA 2025 across six countries spanning three continents, GeNIE took <strong>first place</strong> and achieved 
+                <strong>79% of the maximum possible score</strong>, outperforming the second-best team by <strong>17%</strong>, and completed the entire competition 
+                <strong>without a single human intervention</strong>. These results set a new benchmark for robust, generalizable outdoor robot navigation.
+            </p>
+        </div>
+
+        <div class="teaser">
+            <video controls autoplay loop muted>
+                <source src="asset/video.mp4" type="video/mp4">
+                Your browser does not support the video tag.
+            </video>
+            <p style="margin-top: 15px; color: #666; font-style: italic; text-align: center;">
+                GeNIE navigating through diverse terrains in real-world environments
+            </p>
+        </div>
+
+        <div class="figure">
+            <img src="asset/teaser.png" alt="GeNIE across diverse environments">
+            <div class="figure-caption">
+                Diverse scenes (top row), traversability predictions (middle row), and final path planning results (bottom row) across seven different environments. 
+                GeNIE generalizes well across challenging conditions, including heavy rain, high-contrast lighting, muddy lenses, and diverse terrain types.
+            </div>
+        </div>
+
+        <section id="introduction">
+            <h2>Introduction</h2>
+            <div class="intro-container">
+                <div class="intro-text">
+                    <p>
+                        Navigation in the open world remains challenging due to diverse terrains, lighting, and sensor noise that cause models to fail under domain shifts. The Earth Rover Challenge (ERC) offers a valuable testbed for studying such generalization, deploying identical sidewalk robots across three continents and six countries in varied real-world settings, from urban streets to rural paths, under different weather and lighting conditions. Each robot relies only on low-cost, noisy sensors (RGB camera, IMU, GPS) and limited remote computation, with visual data streamed at just 3–5 Hz, making traditional SLAM pipelines infeasible. The difficulty of the task is underscored by the inaugural results, where the best autonomous system achieved only 36% of the total score.
+                    </p>
+                </div>
+                
+                <div class="intro-image">
+                    <img src="asset/ERC.png" alt="Deployment locations">
+                    <div class="figure-caption">
+                        Examples of diverse terrains in ERC 2025, illustrating the requirement for robots to understand semantics in order to identify safe navigable areas in unstructured environments.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="overview">
+            <h2>System Overview</h2>
+            <p>
+                GeNIE addresses the challenge of robust navigation through a carefully designed architecture that combines foundation models with 
+                novel planning strategies. Given an RGB input image, the system first predicts pixel-wise traversability scores in the image space. 
+                The predicted traversable regions are then projected into a local 2D bird's-eye view (BEV) cost map. Multiple candidate paths are 
+                sampled from this BEV map, followed by path fusion on the top-K paths with the lowest traversability costs to generate more stable 
+                and consistent trajectories. Finally, the best fused path is selected based on its alignment with the goal location.
+            </p>
+            
+            <div class="figure">
+                <img src="asset/figure1_overview.png" alt="System architecture">
+                <div class="figure-caption">
+                    Overview of the GeNIE system. Given an RGB input image, the SAM-TP module predicts navigable regions in the image space. 
+                    These predictions are projected into a bird's-eye view (BEV) cost map. Path fusion is then performed to identify coherent and safe traversable paths, 
+                    followed by path selection based on alignment with the goal direction. Finally, the control module outputs linear and angular velocities to follow the selected path.
+                </div>
+            </div>
+
+        </section>
+
+                </section>
+
+        <section id="sam-tp">
+            <h2>SAM-TP: Traversability Prediction</h2>
+            <div class="intro-container">
+                <div class="intro-text">
+                    <p>Robust navigation requires the ability to perceive traversable regions consistently across diverse terrains, lighting conditions, and sensor configurations. To enable such generalization, we develop <strong>SAM-TP</strong>, a traversability-aware adaptation of the SAM2 model.</p> <p>To train this model, we sample diverse outdoor frames from the <a href="https://huggingface.co/datasets/frodobots/FrodoBots-2K" target="_blank" rel="noopener">FrodoBots-2K</a> dataset and annotate them using a semi-automatic pipeline, producing <strong>15,347</strong> high-quality traversability masks. Each mask marks only regions directly reachable from the robot’s current position, assuming the robot stands near the mid-bottom of the image.</p> <p>SAM-TP alters the SAM2 architecture by removing the original mask decoder and introducing a single <strong>learnable prompt token</strong> that captures traversability semantics. This token is optimized directly via backpropagation, eliminating the need for manual prompts at inference time.</p> <p>We evaluate SAM-TP on a novel benchmark with unseen environments and different robot embodiments, achieving <strong>92.9% IoU</strong> on normal scenes, <strong>79.9%</strong> under difficult conditions, and <strong>92.6%</strong> in cross-embodiment settings. The model outperforms strong baselines, including large vision and language models and state-of-the-art traversability prediction methods.</p>
+                </div>
+                
+                <div class="intro-image">
+                    <img src="asset/sam_tp_comparison.png" alt="SAM-TP comparison">
+                    <div class="figure-caption">
+                        Comparison of traversability predictions (red regions) from SAM, SAM2, VLM (gemini-2.5-flash), and our proposed SAM-TP approach. 
+                        SAM-TP achieves superior segmentation of navigable regions across diverse conditions.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="planning">
+            <h2>Path Fusion, Control and VLM-based Failure Recovery</h2>
+
+            <h3>Path Fusion Strategy</h3>
+            <div class="intro-container">
+                <div class="intro-text">
+                    <p>
+                        Traditional sample-based planners struggle when goals are far away, often oscillating between paths of similar cost or getting trapped in local minima. To address this, we introduce a path fusion strategy that reasons at the path level instead of the pixel level. From the BEV cost map, we sample candidate paths represented as first- and second-order polynomials, then select the lowest-cost set. Using adaptive k-means clustering on the waypoint trajectories, we merge nearby paths based on silhouette-optimized clusters and centroid proximity. The resulting fused path set captures stable, semantically distinct routes, from which we select the one most aligned with the goal direction. This approach reduces switching and improves long-horizon stability, achieving 84.6% Path Identification Precision and 85.7% Path Selection Accuracy, significantly outperforming planners without fusion.
+                    </p>
+                    
+                    <h3>Control and Collision Avoidance</h3>
+                    <p>
+                        The control system operates in a receding-horizon loop that continuously replans based on new observations. A simple waypoint-tracking controller aligns the robot's heading toward the next waypoint, waits for visual confirmation via epipolar geometry, and advances by 1 m before re-evaluating. A lightweight collision detection module monitors the traversability map to halt motion and trigger replanning when hazards appear near the front region. Because the SAM-TP model runs at 10 Hz while input frames arrive at 3–5 Hz, the system performs real-time collision checks. This conservative replan–align–move cycle prioritizes robustness under ERC's high-latency and low-frequency sensing conditions.
+                    </p>
+                </div>
+                
+                <div class="intro-image">
+                    <img src="asset/path_fusion.png" alt="Path fusion visualization">
+                    <div class="figure-caption">
+                        Comparison of path planning with and without fusion. Without fusion, the planner tends to select paths with lower traversability 
+                        when the goal weight is too small, or gets stuck in local minima when too large. Path fusion succeeds in both scenarios by operating at the path level.
+                    </div>
+                </div>
+            </div>
+
+            <h3>VLM-Based Failure Recovery</h3>
+            <p>
+                When the planner encounters a dead end or local minimum, a vision-language model (VLM) assists recovery. The system stores recent RGB observations in a FIFO buffer and, upon detecting failure, queries the VLM using the current and past views to reason about how to return to a previously navigable route. This approach enables semantic recovery without relying on explicit metric maps or handcrafted heuristics. Although evaluated qualitatively, the method achieved around 80% success in recovering from dead ends during field tests, demonstrating the potential of language-driven reasoning for reactive navigation.
+            </p>
+
+           
+        </section>
+
+        <section id="references">
+            <h2>References</h2>
+            <ol>
+                <li>
+                    J. Frey, M. Mattamala, N. Chebrolu, C. Cadena, M. Fallon, and M. Hutter, 
+                    "Fast Traversability Estimation for Wild Visual Navigation," 
+                    <em>Robotics: Science and Systems</em>, Daegu, Republic of Korea, July 2023.
+                </li>
+            </ol>
+        </section>
+
+<section id="citation">
+            <h2>Citation</h2>
+            <p>If you find our work useful, please consider citing:</p>
+            <pre>@article{wang2025genie,
+  title={GeNIE: A Generalizable Navigation System for In-the-Wild Environments},
+  author={Wang, Jiaming and Liu, Diwen and Chen, Jizhuo and Da, Jiaxuan and 
+          Qian, Nuowen and Man, Tram Minh and Soh, Harold},
+  journal={arXiv preprint arXiv:2506.17960},
+  year={2025}
+}</pre>
+        </section>
+
+        <footer>
+            <p style="margin-top: 20px; font-size: 0.9em;">
+                &copy; 2025 GeNIE Team | Submitted to IEEE Robotics and Automation Letters (RA-L)
+            </p>
+        </footer>
+    </div>
+</body>
+</html>
