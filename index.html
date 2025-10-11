@@ -154,12 +154,99 @@ Bottom-right: Trajectory visualization showing sampled candidate paths (light bl
                 </div>
             </div>
 
-            <h3>VLM-Based Failure Recovery</h3>
+            <!-- <h3>VLM-Based Failure Recovery</h3>
             <p>
                 When the planner encounters a dead end or local minimum, a vision-language model (VLM) assists recovery. The system stores recent RGB observations in a FIFO buffer and, upon detecting failure, queries the VLM using the current and past views to reason about how to return to a previously navigable route. This approach enables semantic recovery without relying on explicit metric maps or handcrafted heuristics. Although evaluated qualitatively, the method achieved around 80% success in recovering from dead ends during field tests, demonstrating the potential of language-driven reasoning for reactive navigation.
+            </p> -->
+            <h3>VLM-Guided Failure Recovery</h3>
+  <p>
+    When the local planner stalls or drifts off the road, we trigger a lightweight
+    two-stage recovery routine driven by a vision-language model (VLM). Unlike
+    traditional escape behaviors that rely on hand-tuned heuristics or metric maps,
+    this approach uses semantic reasoning over camera observations to select safe
+    recovery actions.
+  </p>
+
+  <h4>Stage 1 — Monitor</h4>
+  <p>
+    During normal navigation, the robot continuously samples the front RGB camera and
+    maintains a small FIFO buffer of recent views. At a fixed rate, we query the VLM
+    using the latest frame plus short temporal context to classify the robot’s status
+    as <em>on-road</em> or <em>off-road</em>. A majority vote across recent
+    classifications suppresses noise from transient occlusions and lighting changes.
+    If the VLM flags <em>off-road</em> in two consecutive evaluations, recovery mode
+    is activated.
+  </p>
+
+  <h4>Stage 2 — Recover</h4>
+  <p>
+    Recovery consists of two steps:
+  </p>
+  <ol>
+    <li>
+      <strong>Look-around selection:</strong> The robot pauses and performs a 360°
+      look-around using four headings at 90° increments. The VLM inspects the four
+      captured views as a set and selects the heading that is most likely to lead
+      back to the road, using cues such as road texture, painted lines, or curb
+      boundaries. If uncertainty is high, the VLM can request a repeat sweep before
+      committing to a direction.
+    </li>
+    <li>
+      <strong>Direction choice:</strong> Facing the selected heading, the robot
+      presents a fresh view with three options: <em>left</em>, <em>straight</em>, or
+      <em>right</em>. The VLM recommends a conservative short-horizon action or
+      requests another sweep if the scene remains ambiguous. Each motion is executed
+      at low speed and limited distance, with a brief settle pause before
+      re-evaluation. If the VLM detects that the robot has rejoined the road, normal
+      navigation resumes; otherwise, recovery iterates.
+    </li>
+  </ol>
+
+  <p>
+    This design enables reliable recovery using only onboard perception: no GPS,
+    metric maps, or handcrafted escape behaviors are required. In qualitative field
+    trials, the method successfully escaped dead ends and roadside drifts in roughly
+    80% of cases, showing strong potential for language-guided corrective navigation.
+  </p>
+
+            <div class="figure">
+                <img src="asset/vlm.png" alt="VLM-based failure recovery">
+                <div class="figure-caption">
+                    VLM-guided failure recovery process showing the two-stage approach: monitoring for off-road detection and recovery through look-around selection and direction choice.
+                </div>
+            </div>
+           
+        </section>
+
+        <section id="additional-demos">
+            <h2>Additional Demonstrations</h2>
+            <p>
+                Beyond outdoor navigation, GeNIE demonstrates strong generalization to diverse environments and robot embodiments, 
+                including indoor settings and different hardware platforms.
             </p>
 
-           
+            <h3>Cross-Embodiment Deployment on Robot Dog</h3>
+            <div class="teaser">
+                <video controls autoplay loop muted>
+                    <source src="asset/genie_dog_clb_compressed.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <p style="margin-top: 15px; color: #666; font-style: italic; text-align: center;">
+                    GeNIE deployed on a quadruped robot platform, showcasing cross-embodiment capabilities and adaptability to different robot morphologies.
+                </p>
+            </div>
+
+            <h3>Indoor Environment Navigation</h3>
+            <div class="teaser">
+                <video controls autoplay loop muted>
+                    <source src="asset/genie_inddor_compressed.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+                <p style="margin-top: 15px; color: #666; font-style: italic; text-align: center;">
+                    GeNIE navigating autonomously in indoor environments, demonstrating generalization beyond outdoor terrains.
+                </p>
+            </div>
+
         </section>
 
         <section id="references">
